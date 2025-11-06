@@ -14,12 +14,12 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SessionGuard } from '../auth/guards/session.guard';
 import { CurrentUser, CurrentProfile } from '../auth/decorators/current-user.decorator';
 import { CreatePostDto, UpdatePostDto, CreateCommentDto, ApplyToProjectDto, UpdateApplicationStatusDto } from './dto/post.dto';
 
 @Controller('posts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(SessionGuard)
 export class PostsController {
   private readonly logger = new Logger(PostsController.name);
   
@@ -76,13 +76,11 @@ export class PostsController {
   }
 
   @Post()
-  @UseInterceptors(FileInterceptor('image'))
   async createPost(
     @Body() createPostDto: CreatePostDto,
     @CurrentProfile() profile: any,
-    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.postsService.createPost(profile?.profileId, createPostDto, file);
+    return this.postsService.createPost(profile?.profileId, createPostDto, createPostDto.image);
   }
 
   @Put(':id')

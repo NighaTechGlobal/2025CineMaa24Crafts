@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNotEmpty, IsEnum, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsEnum, IsDateString, IsArray } from 'class-validator';
 
 export class CreatePostDto {
   @IsNotEmpty()
@@ -21,13 +21,19 @@ export class CreatePostDto {
   @IsString()
   department?: string;
 
+  // Optional array of departments (preferred going forward)
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  departments?: string[];
+
   @IsOptional()
   @IsDateString()
   deadline?: string;
 
   @IsOptional()
   @IsString()
-  poster_url?: string;
+  image?: string; // base64 encoded image
 
   @IsOptional()
   @IsString()
@@ -60,13 +66,15 @@ export class UpdatePostDto {
   department?: string;
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  departments?: string[];
+
+  @IsOptional()
   @IsDateString()
   deadline?: string;
 
-  @IsOptional()
-  @IsString()
-  poster_url?: string;
-
+  
   @IsOptional()
   @IsEnum(['open', 'closed', 'in_progress', 'completed'])
   status?: string;

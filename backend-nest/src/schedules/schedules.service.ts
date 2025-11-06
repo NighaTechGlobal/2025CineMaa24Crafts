@@ -130,7 +130,7 @@ export class SchedulesService {
       .select(`
         *,
         profiles!created_by(id, first_name, last_name, profile_photo_url),
-        projects(id, title, poster_url)
+        projects(id, title)
       `)
       .eq('id', id)
       .single();
@@ -267,7 +267,15 @@ export class SchedulesService {
       .from('schedule_members')
       .select(`
         *,
-        profiles(id, first_name, last_name, profile_photo_url, department)
+        profiles(
+          id,
+          first_name,
+          last_name,
+          profile_photo_url,
+          role,
+          artist_profiles(department),
+          recruiter_profiles(department)
+        )
       `)
       .eq('schedule_id', scheduleId);
 
@@ -275,7 +283,25 @@ export class SchedulesService {
       throw new BadRequestException(`Failed to fetch schedule members: ${error.message}`);
     }
 
-    return data;
+    // Flatten role-specific department into profiles.department for frontend compatibility
+    const transformed = (data || []).map((m: any) => {
+      const p = m.profiles;
+      const artist = Array.isArray(p?.artist_profiles) ? (p.artist_profiles[0] || {}) : (p?.artist_profiles || {});
+      const recruiter = Array.isArray(p?.recruiter_profiles) ? (p.recruiter_profiles[0] || {}) : (p?.recruiter_profiles || {});
+      const department = artist?.department ?? recruiter?.department ?? null;
+
+      return {
+        ...m,
+        profiles: {
+          ...p,
+          department,
+          artist_profiles: undefined,
+          recruiter_profiles: undefined,
+        },
+      };
+    });
+
+    return transformed;
   }
 }
 

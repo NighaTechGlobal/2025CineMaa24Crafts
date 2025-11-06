@@ -72,7 +72,7 @@ export class OtpService {
       const supabase = this.supabaseService.getAdminClient();
       const expiresAt = getOTPExpirationIST();
 
-      // Mark existing OTPs as verified (invalidate them) by setting verified_at
+      // Invalidate any existing unverified OTPs for this phone
       await supabase
         .from('otp_verifications')
         .update({ verified_at: getCurrentIST() })
@@ -150,6 +150,60 @@ export class OtpService {
       };
     } catch (error) {
       this.logger.error('Verify OTP error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify OTP OR accept already-verified OTP within validity window
+   * Useful for flows that call verify first, then session login immediately
+   */
+  async verifyOrConfirmOTP(phoneNumber: string, otp: string): Promise<{
+    isValid: boolean;
+    message: string;
+    otpRecord?: any;
+  }> {
+    try {
+      const supabase = this.supabaseService.getAdminClient();
+
+      const { data: otpRecord, error } = await supabase
+        .from('otp_verifications')
+        .select('*')
+        .eq('phone', phoneNumber)
+        .eq('otp', otp)
+        .gt('expires_at', getCurrentISTForComparison())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !otpRecord) {
+        this.logger.log(`❌ Invalid or expired OTP (confirm) for ${phoneNumber}`);
+        return { isValid: false, message: 'Invalid or expired OTP' };
+      }
+
+      // If not yet verified, mark it verified
+      if (!otpRecord.verified_at) {
+        const { error: updateError } = await supabase
+          .from('otp_verifications')
+          .update({ verified_at: getCurrentIST() })
+          .eq('id', otpRecord.id);
+
+        if (updateError) {
+          this.logger.error('Error updating OTP status (confirm):', updateError);
+          throw new Error(`Failed to update OTP status: ${updateError.message}`);
+        }
+        this.logger.log(`✅ OTP confirmed and marked verified for ${phoneNumber}`);
+      } else {
+        this.logger.log(`ℹ️  OTP already verified for ${phoneNumber}`);
+      }
+
+      return {
+        isValid: true,
+        message: 'OTP verified successfully',
+        otpRecord,
+      };
+    } catch (error) {
+      this.logger.error('Verify or confirm OTP error:', error);
       throw error;
     }
   }

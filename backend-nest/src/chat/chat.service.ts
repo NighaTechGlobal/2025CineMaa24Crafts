@@ -193,7 +193,7 @@ export class ChatService {
   async sendMessage(
     conversationId: string,
     senderId: string,
-    sendMessageDto: SendMessageDto,
+    sendMessageDto: SendMessageDto & { client_msg_id?: string },
   ) {
     const supabase = this.supabaseService.getAdminClient();
 
@@ -217,6 +217,7 @@ export class ChatService {
         sender_profile_id: senderId,
         content: sendMessageDto.content,
         metadata: sendMessageDto.metadata || null,
+        client_msg_id: sendMessageDto.client_msg_id || null,
         delivered: true,
       })
       .select(`

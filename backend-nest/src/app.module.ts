@@ -12,6 +12,7 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { PostsModule } from './posts/posts.module';
 import { ChatModule } from './chat/chat.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { UploadsModule } from './uploads/uploads.module';
     PostsModule,
     ChatModule,
     UploadsModule,
+    AdminModule,
   ],
   providers: [
     // Enable throttler guard for rate limiting

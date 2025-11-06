@@ -44,7 +44,6 @@ describe('ProjectsService', () => {
       const createDto = {
         title: 'Test Project',
         description: 'A test project',
-        poster_url: 'https://example.com/poster.jpg',
         start_date: '2025-11-01',
         end_date: '2026-02-28',
       };

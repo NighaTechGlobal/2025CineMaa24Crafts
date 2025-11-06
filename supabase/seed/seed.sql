@@ -58,11 +58,12 @@ INSERT INTO schedule_members (schedule_id, profile_id, status) VALUES
   ('sc333333-3333-3333-3333-333333333333', 'pa333333-3333-3333-3333-333333333333', 'accepted');
 
 -- Insert sample posts
-INSERT INTO posts (id, author_profile_id, image_url, caption, likes_count, comments_count, created_at) VALUES
-  ('po111111-1111-1111-1111-111111111111', 'pa111111-1111-1111-1111-111111111111', 'https://via.placeholder.com/800x600/3498db/FFFFFF?text=Behind+the+Scenes', 'Just wrapped an intense action sequence! 💪 #TamilCinema #ActionMode', 45, 12, now() - INTERVAL '2 days'),
-  ('po222222-2222-2222-2222-222222222222', 'pa222222-2222-2222-2222-222222222222', 'https://via.placeholder.com/800x600/e74c3c/FFFFFF?text=Dance+Rehearsal', 'Perfecting the moves for the grand finale! 💃✨ #DanceLife #TamilFilms', 78, 23, now() - INTERVAL '1 day'),
-  ('po333333-3333-3333-3333-333333333333', 'pa333333-3333-3333-3333-333333333333', 'https://via.placeholder.com/800x600/2ecc71/FFFFFF?text=Music+Studio', 'Late night music sessions are the best! 🎵🎹 #MusicProducer #TamilMusic', 92, 18, now() - INTERVAL '5 hours'),
-  ('po444444-4444-4444-4444-444444444444', 'pr111111-1111-1111-1111-111111111111', 'https://via.placeholder.com/800x600/f39c12/FFFFFF?text=Project+Announcement', 'Excited to announce our new Tamil action blockbuster! Auditions starting soon. 🎬 #CastingCall #TamilCinema', 156, 34, now() - INTERVAL '12 hours');
+-- Updated: insert posts without legacy image_url/likes_count/comments_count. Use BYTEA `image` or leave null.
+INSERT INTO posts (id, author_profile_id, image, caption, created_at) VALUES
+  ('po111111-1111-1111-1111-111111111111', 'pa111111-1111-1111-1111-111111111111', NULL, 'Just wrapped an intense action sequence! 💪 #TamilCinema #ActionMode', now() - INTERVAL '2 days'),
+  ('po222222-2222-2222-2222-222222222222', 'pa222222-2222-2222-2222-222222222222', NULL, 'Perfecting the moves for the grand finale! 💃✨ #DanceLife #TamilFilms', now() - INTERVAL '1 day'),
+  ('po333333-3333-3333-3333-333333333333', 'pa333333-3333-3333-3333-333333333333', NULL, 'Late night music sessions are the best! 🎵🎹 #MusicProducer #TamilMusic', now() - INTERVAL '5 hours'),
+  ('po444444-4444-4444-4444-444444444444', 'pr111111-1111-1111-1111-111111111111', NULL, 'Excited to announce our new Tamil action blockbuster! Auditions starting soon. 🎬 #CastingCall #TamilCinema', now() - INTERVAL '12 hours');
 
 -- Insert post comments
 INSERT INTO post_comments (post_id, author_profile_id, content, created_at) VALUES
@@ -156,7 +157,7 @@ INSERT INTO social_links (profile_id, platform, url, order_index) VALUES
   ('pa555555-5555-5555-5555-555555555555', 'linkedin', 'https://linkedin.com/in/arjunreddy', 2);
 
 -- Additional posts from new profiles
-INSERT INTO posts (id, author_profile_id, image_url, caption, likes_count, comments_count, created_at) VALUES
-  ('po555555-5555-5555-5555-555555555555', 'pa444444-4444-4444-4444-444444444444', 'https://via.placeholder.com/800x600/9b59b6/FFFFFF?text=Acting+Workshop', 'Just completed an intensive acting workshop! Ready for new challenges 🎭 #ActingLife #TamilCinema', 34, 8, now() - INTERVAL '6 hours'),
-  ('po666666-6666-6666-6666-666666666666', 'pa555555-5555-5555-5555-555555555555', 'https://via.placeholder.com/800x600/34495e/FFFFFF?text=Cinematography', 'Capturing the beauty of Tamil Nadu through my lens 📸 #Cinematography #TamilNadu', 67, 15, now() - INTERVAL '8 hours');
+INSERT INTO posts (id, author_profile_id, image, caption, created_at) VALUES
+  ('po555555-5555-5555-5555-555555555555', 'pa444444-4444-4444-4444-444444444444', NULL, 'Just completed an intensive acting workshop! Ready for new challenges 🎭 #ActingLife #TamilCinema', now() - INTERVAL '6 hours'),
+  ('po666666-6666-6666-6666-666666666666', 'pa555555-5555-5555-5555-555555555555', NULL, 'Capturing the beauty of Tamil Nadu through my lens 📸 #Cinematography #TamilNadu', now() - INTERVAL '8 hours');
 

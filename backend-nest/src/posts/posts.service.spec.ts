@@ -47,7 +47,7 @@ describe('PostsService', () => {
         title: 'Test Project',
         description: 'Test project description',
         caption: 'Test post',
-        image_url: 'https://example.com/image.jpg',
+        image: 'iVBORw0KGgoAAAANSUhEUgAA...',
       };
 
       const mockProfile = {
@@ -61,9 +61,7 @@ describe('PostsService', () => {
         title: createDto.title,
         description: createDto.description,
         caption: createDto.caption,
-        image_url: createDto.image_url,
-        likes_count: 0,
-        comments_count: 0,
+        image: createDto.image,
         created_at: new Date().toISOString(),
       };
 

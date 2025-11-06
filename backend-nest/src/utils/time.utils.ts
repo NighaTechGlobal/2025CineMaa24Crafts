@@ -3,14 +3,12 @@
  */
 
 /**
- * Get current time in IST
- * Returns ISO string with IST timezone offset
+ * Get current time for storage/comparison
+ * Returns ISO string (UTC) suitable for Supabase timestamptz
  */
 export function getCurrentIST(): string {
   const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-  const istTime = new Date(now.getTime() + istOffset);
-  return istTime.toISOString();
+  return now.toISOString();
 }
 
 /**
@@ -22,15 +20,14 @@ export function getCurrentISTForComparison(): string {
 }
 
 /**
- * Get OTP expiration time in IST (10 minutes from now)
- * Returns ISO string for storing in database
+ * Get OTP expiration time (10 minutes from now)
+ * Returns ISO string (UTC) for storing in database
  */
 export function getOTPExpirationIST(): string {
   const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
   const expirationTime = 10 * 60 * 1000; // 10 minutes in milliseconds
-  const istExpiry = new Date(now.getTime() + istOffset + expirationTime);
-  return istExpiry.toISOString();
+  const expiry = new Date(now.getTime() + expirationTime);
+  return expiry.toISOString();
 }
 
 /**
@@ -58,15 +55,12 @@ export const ISTTimestamp = {
   now: (): string => getCurrentIST(),
   expiresIn: (minutes: number): string => {
     const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
     const expirationTime = minutes * 60 * 1000;
-    const istExpiry = new Date(now.getTime() + istOffset + expirationTime);
-    return istExpiry.toISOString();
+    const expiry = new Date(now.getTime() + expirationTime);
+    return expiry.toISOString();
   },
   fromDate: (date: Date): string => {
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istTime = new Date(date.getTime() + istOffset);
-    return istTime.toISOString();
+    return date.toISOString();
   },
 };
 

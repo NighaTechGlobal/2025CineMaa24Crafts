@@ -11,7 +11,6 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsString()
-  poster_url?: string;
 
   @IsOptional()
   @IsDateString()

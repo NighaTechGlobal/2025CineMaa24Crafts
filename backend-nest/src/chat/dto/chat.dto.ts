@@ -22,6 +22,10 @@ export class SendMessageDto {
 
   @IsOptional()
   metadata?: any;
+
+  @IsOptional()
+  @IsString()
+  client_msg_id?: string;
 }
 
 export class UpdateTypingDto {

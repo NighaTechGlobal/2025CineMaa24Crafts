@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import * as morgan from 'morgan';
 import helmet from 'helmet';
 import { validateEnvironmentVariables } from './utils/config-validation';
+import { RedisIoAdapter } from './ws/redis-io.adapter';
 
 async function bootstrap() {
   // Validate environment variables before starting the application
@@ -66,6 +67,11 @@ async function bootstrap() {
 
   // Global prefix
   app.setGlobalPrefix('api');
+
+  // Use Socket.IO with Redis adapter for WebSocket scaling
+  const redisAdapter = new RedisIoAdapter(app);
+  await redisAdapter.connectToRedis(process.env.REDIS_URL);
+  app.useWebSocketAdapter(redisAdapter);
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');

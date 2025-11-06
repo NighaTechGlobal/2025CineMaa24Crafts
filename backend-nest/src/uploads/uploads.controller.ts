@@ -40,7 +40,13 @@ export class UploadsController {
       throw new BadRequestException('Invalid file type. Only images are allowed.');
     }
 
-    return this.uploadsService.uploadFile(file, profile.id);
+    const result = await this.uploadsService.uploadFile(file, profile.id);
+    
+    // Return base64 image that can be stored directly in database
+    return {
+      success: result.success,
+      image: result.image, // base64 encoded image
+    };
   }
 }
 

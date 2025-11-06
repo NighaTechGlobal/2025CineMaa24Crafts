@@ -105,7 +105,7 @@ export class PostsService {
   async createPost(
     profileId: string,
     createPostDto: CreatePostDto,
-    file?: Express.Multer.File,
+    imageBase64?: string,
   ) {
     const supabase = this.supabaseService.getAdminClient();
 
@@ -120,11 +120,14 @@ export class PostsService {
       throw new ForbiddenException('Only recruiters can create projects');
     }
 
-    let posterUrl = createPostDto.poster_url;
+    // Convert base64 image to bytea if provided
+    let imageBuffer = null;
+    if (imageBase64) {
+      imageBuffer = Buffer.from(imageBase64, 'base64');
+    }
 
-    // TODO: Upload file to Supabase Storage if provided
-
-    const { data, error } = await supabase
+    // First try inserting with departments array (new schema).
+    let { data, error } = await supabase
       .from('posts')
       .insert({
         author_profile_id: profileId,
@@ -132,14 +135,38 @@ export class PostsService {
         description: createPostDto.description,
         requirements: createPostDto.requirements,
         location: createPostDto.location,
-        department: createPostDto.department,
+        department: createPostDto.departments?.length ? createPostDto.departments.join(', ') : createPostDto.department,
+        departments: createPostDto.departments,
         deadline: createPostDto.deadline,
-        poster_url: posterUrl,
+        image: imageBuffer, // Store binary image directly
         caption: createPostDto.caption,
         status: createPostDto.status || 'open',
       })
       .select()
       .single();
+
+    // If the column doesn't exist yet, retry without `departments` to avoid breaking.
+    if (error && /column .*departments.* does not exist/i.test(error.message || '')) {
+      this.logger.warn('Departments column missing. Retrying insert without departments array for backward compatibility.');
+      const retry = await supabase
+        .from('posts')
+        .insert({
+          author_profile_id: profileId,
+          title: createPostDto.title,
+          description: createPostDto.description,
+          requirements: createPostDto.requirements,
+          location: createPostDto.location,
+          department: createPostDto.departments?.length ? createPostDto.departments.join(', ') : createPostDto.department,
+          deadline: createPostDto.deadline,
+          image: imageBuffer,
+          caption: createPostDto.caption,
+          status: createPostDto.status || 'open',
+        })
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       this.logger.error('Failed to create post:', error);
@@ -210,100 +237,21 @@ export class PostsService {
   }
 
   async toggleLike(postId: string, profileId: string) {
-    const supabase = this.supabaseService.getAdminClient();
-
-    // Check if already liked
-    const { data: existing } = await supabase
-      .from('post_likes')
-      .select('*')
-      .eq('post_id', postId)
-      .eq('profile_id', profileId)
-      .single();
-
-    if (existing) {
-      // Unlike
-      await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', postId)
-        .eq('profile_id', profileId);
-
-      return { liked: false };
-    } else {
-      // Like
-      await supabase.from('post_likes').insert({
-        post_id: postId,
-        profile_id: profileId,
-      });
-
-      return { liked: true };
-    }
+    this.logger.warn(`Likes feature disabled; ignoring like toggle for postId=${postId}`);
+    return { liked: false };
   }
 
   async addComment(postId: string, profileId: string, content: string) {
-    const supabase = this.supabaseService.getAdminClient();
-
-    const { data, error } = await supabase
-      .from('post_comments')
-      .insert({
-        post_id: postId,
-        author_profile_id: profileId,
-        content,
-      })
-      .select(`
-        *,
-        profiles!author_profile_id(id, first_name, last_name, profile_photo_url)
-      `)
-      .single();
-
-    if (error) {
-      throw new BadRequestException(`Failed to add comment: ${error.message}`);
-    }
-
-    return data;
+    this.logger.warn(`Comments feature disabled; rejecting addComment for postId=${postId}`);
+    throw new BadRequestException('Comments are disabled');
   }
 
   async getComments(
     postId: string,
     query: ListCommentsQuery,
   ): Promise<PaginatedResponse<any>> {
-    const { cursor, limit = 20 } = query;
-    const supabase = this.supabaseService.getAdminClient();
-
-    let queryBuilder = supabase
-      .from('post_comments')
-      .select(`
-        *,
-        profiles!author_profile_id(id, first_name, last_name, profile_photo_url)
-      `)
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true })
-      .limit(limit + 1);
-
-    // Apply cursor if provided
-    if (cursor) {
-      const decoded = decodeCursor(cursor);
-      if (decoded) {
-        queryBuilder = queryBuilder.gt('created_at', decoded.timestamp);
-      }
-    }
-
-    const { data, error } = await queryBuilder;
-
-    if (error) {
-      throw new BadRequestException(`Failed to fetch comments: ${error.message}`);
-    }
-
-    const hasMore = data.length > limit;
-    const comments = hasMore ? data.slice(0, limit) : data;
-    const nextCursor = hasMore
-      ? encodeCursor(data[limit - 1].created_at, data[limit - 1].id)
-      : null;
-
-    return {
-      data: comments,
-      nextCursor,
-    };
+    this.logger.warn(`Comments feature disabled; returning empty comments for postId=${postId}`);
+    return { data: [], nextCursor: null };
   }
 
   // Project Application Methods
@@ -406,7 +354,7 @@ export class PostsService {
           )
         ),
         project:posts!project_id(
-          id, title, description, department, location, image_url, poster_url, deadline, status
+          id, title, description, department, location, image, deadline, status
         )
       `)
       .order('applied_at', { ascending: false })
