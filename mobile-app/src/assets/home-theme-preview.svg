@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradPurple" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+    <linearGradient id="gradPink" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14B8A6" />
+      <stop offset="100%" stop-color="#2DD4BF" />
+    </linearGradient>
+    <linearGradient id="gradPurpleToWhite" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F3FF" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="1200" height="800" fill="#FAFAFA" />
+
+  <!-- Hero sample -->
+  <rect x="0" y="0" width="1200" height="300" fill="url(#gradPurple)" />
+  <text x="40" y="80" font-size="36" font-weight="700" fill="#FFFFFF">Home Hero</text>
+  <text x="40" y="120" font-size="18" fill="#FFFFFF">Primary + Secondary gradient overlay</text>
+
+  <!-- CTA button sample -->
+  <rect x="40" y="180" width="220" height="56" rx="16" fill="#FFFFFF" opacity="0.15" />
+  <rect x="44" y="184" width="212" height="48" rx="14" fill="#4F46E5" />
+  <text x="150" y="214" font-size="16" font-weight="600" text-anchor="middle" fill="#FFFFFF">Get Started</text>
+
+  <!-- Card sample on hero -->
+  <rect x="300" y="160" width="340" height="120" rx="20" fill="#FFFFFF" opacity="0.12" />
+  <rect x="304" y="164" width="332" height="112" rx="18" fill="#FFFFFF" />
+  <text x="320" y="194" font-size="16" font-weight="700" fill="#111827">Featured Project</text>
+  <text x="320" y="220" font-size="13" fill="#6B7280">Modern card on light surface</text>
+
+  <!-- Title for swatches -->
+  <text x="40" y="350" font-size="22" font-weight="700" fill="#111827">Palette &amp; Gradients</text>
+
+  <!-- Row 1: Brand colors -->
+  <g font-size="12">
+    <rect x="40"  y="370" width="200" height="90" rx="16" fill="#4F46E5" />
+    <text x="50"  y="400" fill="#FFFFFF" font-weight="700">primary #4F46E5</text>
+    <text x="50"  y="420" fill="#FFFFFF">Buttons, accents</text>
+
+    <rect x="260" y="370" width="200" height="90" rx="16" fill="#1E40AF" />
+    <text x="270" y="400" fill="#FFFFFF" font-weight="700">primaryDark #1E40AF</text>
+    <text x="270" y="420" fill="#FFFFFF">Active/pressed</text>
+
+    <rect x="480" y="370" width="200" height="90" rx="16" fill="#6366F1" />
+    <text x="490" y="400" fill="#FFFFFF" font-weight="700">primaryLight #6366F1</text>
+    <text x="490" y="420" fill="#FFFFFF">Focus ring</text>
+
+    <rect x="700" y="370" width="200" height="90" rx="16" fill="#A7F3D0" />
+    <text x="710" y="400" fill="#111827" font-weight="700">secondaryLight #A7F3D0</text>
+    <text x="710" y="420" fill="#111827">Secondary UI</text>
+
+    <rect x="920" y="370" width="200" height="90" rx="16" fill="#3B82F6" />
+    <text x="930" y="400" fill="#FFFFFF" font-weight="700">accent #3B82F6</text>
+    <text x="930" y="420" fill="#FFFFFF">Highlights</text>
+  </g>
+
+  <!-- Row 2: Surfaces & text -->
+  <g font-size="12">
+    <rect x="40"  y="480" width="200" height="90" rx="16" fill="#FAFAFA" stroke="#E5E7EB" />
+    <text x="50"  y="510" fill="#111827" font-weight="700">background #FAFAFA</text>
+    <text x="50"  y="530" fill="#6B7280">App canvas</text>
+
+    <rect x="260" y="480" width="200" height="90" rx="16" fill="#FFFFFF" stroke="#E5E7EB" />
+    <text x="270" y="510" fill="#111827" font-weight="700">surface #FFFFFF</text>
+    <text x="270" y="530" fill="#6B7280">Cards</text>
+
+    <rect x="480" y="480" width="200" height="90" rx="16" fill="#F9FAFB" stroke="#E5E7EB" />
+    <text x="490" y="510" fill="#111827" font-weight="700">surfaceLight #F9FAFB</text>
+    <text x="490" y="530" fill="#6B7280">Inputs</text>
+
+    <rect x="700" y="480" width="200" height="90" rx="16" fill="#F3F4F6" stroke="#E5E7EB" />
+    <text x="710" y="510" fill="#111827" font-weight="700">surfaceDark #F3F4F6</text>
+    <text x="710" y="530" fill="#6B7280">Dividers</text>
+
+    <rect x="920" y="480" width="200" height="90" rx="16" fill="#111827" />
+    <text x="930" y="510" fill="#FFFFFF" font-weight="700">text #111827</text>
+    <text x="930" y="530" fill="#FFFFFF">Primary text</text>
+  </g>
+
+  <!-- Row 3: Status & info -->
+  <g font-size="12">
+    <rect x="40"  y="590" width="200" height="90" rx="16" fill="#10B981" />
+    <text x="50"  y="620" fill="#FFFFFF" font-weight="700">success #10B981</text>
+    <text x="50"  y="640" fill="#FFFFFF">Confirmations</text>
+
+    <rect x="260" y="590" width="200" height="90" rx="16" fill="#F59E0B" />
+    <text x="270" y="620" fill="#FFFFFF" font-weight="700">warning #F59E0B</text>
+    <text x="270" y="640" fill="#FFFFFF">Caution</text>
+
+    <rect x="480" y="590" width="200" height="90" rx="16" fill="#EF4444" />
+    <text x="490" y="620" fill="#FFFFFF" font-weight="700">error #EF4444</text>
+    <text x="490" y="640" fill="#FFFFFF">Destructive</text>
+
+    <rect x="700" y="590" width="200" height="90" rx="16" fill="#3B82F6" />
+    <text x="710" y="620" fill="#FFFFFF" font-weight="700">info #3B82F6</text>
+    <text x="710" y="640" fill="#FFFFFF">Badges</text>
+
+    <!-- Gradient swatch -->
+    <rect x="920" y="590" width="200" height="90" rx="16" fill="url(#gradPink)" />
+    <text x="930" y="620" fill="#FFFFFF" font-weight="700">gradientTeal</text>
+    <text x="930" y="640" fill="#FFFFFF">#14B8A6 to #2DD4BF</text>
+  </g>
+
+  <!-- Gradient samples -->
+  <rect x="40" y="700" width="360" height="60" rx="16" fill="url(#gradPurple)" />
+  <text x="50" y="740" font-size="12" fill="#FFFFFF">gradientIndigo: #4F46E5 to #1D4ED8</text>
+
+  <rect x="440" y="700" width="360" height="60" rx="16" fill="url(#gradPurpleToWhite)" />
+  <text x="450" y="740" font-size="12" fill="#111827">gradientPurpleToWhite: #F5F3FF to #FFFFFF</text>
+
+  <rect x="840" y="700" width="320" height="60" rx="16" fill="url(#gradPink)" />
+  <text x="850" y="740" font-size="12" fill="#FFFFFF">gradientTeal: #14B8A6 to #2DD4BF</text>
+</svg>
