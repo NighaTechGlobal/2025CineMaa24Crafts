@@ -30,9 +30,9 @@ build/
 *.tsbuildinfo
 
 # Expo
-mobile-app/.expo/
-mobile-app/.expo-shared/
-mobile-app/expo-updates/
+# mobile-app/.expo/
+# mobile-app/.expo-shared/
+# mobile-app/expo-updates/
 *.jks
 *.p8
 *.p12
