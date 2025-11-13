@@ -1,24 +1,30 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { PhotoService } from '../photo/photo.service';
 import { CreatePostDto, UpdatePostDto, ListPostsQuery, ListCommentsQuery, ApplyToProjectDto, ListApplicationsQuery, UpdateApplicationStatusDto } from './dto/post.dto';
 import { encodeCursor, decodeCursor, PaginatedResponse } from '../utils/cursor.util';
+
+// Removed: MIME detection moved to PhotoService
 
 @Injectable()
 export class PostsService {
   private readonly logger = new Logger(PostsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly photoService: PhotoService,
+  ) {}
 
   async listPosts(query: ListPostsQuery): Promise<PaginatedResponse<any>> {
-    const { cursor, limit = 20, profileId, role } = query;
-    this.logger.log(`📋 listPosts called with: cursor=${cursor ? 'provided' : 'none'}, limit=${limit}, profileId=${profileId || 'none'}, role=${role || 'none'}`);
+    const { cursor, limit = 20, profileId, role, department } = query;
+    this.logger.log(`📋 listPosts called with: cursor=${cursor ? 'provided' : 'none'}, limit=${limit}, profileId=${profileId || 'none'}, role=${role || 'none'}, department=${department || 'none'}`);
     
     const supabase = this.supabaseService.getAdminClient();
 
     let queryBuilder = supabase
       .from('posts')
       .select(`
-        *,
+        id, author_profile_id, image_url, caption, title, description, requirements, location, department, deadline, status, created_at,
         profiles!author_profile_id(id, first_name, last_name, profile_photo_url, role, is_premium)
       `)
       .order('created_at', { ascending: false })
@@ -34,6 +40,15 @@ export class PostsService {
     if (role) {
       this.logger.log(`🔍 Filtering posts by role: ${role}`);
       queryBuilder = queryBuilder.eq('profiles.role', role);
+    }
+
+    // Filter by department if provided
+    if (department) {
+      const normalizedDept = department.trim();
+      this.logger.log(`🔍 Filtering posts by department: ${normalizedDept}`);
+      // Department column stores either a single department or a comma-separated list.
+      // Use ilike substring match to cover both cases.
+      queryBuilder = queryBuilder.ilike('department', `%${normalizedDept}%`);
     }
 
     // Apply cursor if provided
@@ -80,7 +95,7 @@ export class PostsService {
     const { data, error } = await supabase
       .from('posts')
       .select(`
-        *,
+        id, author_profile_id, image_url, caption, title, description, requirements, location, department, deadline, status, created_at,
         profiles!author_profile_id(id, first_name, last_name, profile_photo_url, role)
       `)
       .eq('id', id)
@@ -97,7 +112,8 @@ export class PostsService {
     }
 
     this.logger.log(`✅ Successfully fetched post: ${data.title} (ID: ${data.id})`);
-    this.logger.log(`👤 Author: ${data.profiles?.first_name} ${data.profiles?.last_name}`);
+    const author = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+    this.logger.log(`👤 Author: ${author?.first_name} ${author?.last_name}`);
     
     return data;
   }
@@ -120,48 +136,47 @@ export class PostsService {
       throw new ForbiddenException('Only recruiters can create projects');
     }
 
-    // Convert base64 image to bytea if provided
-    let imageBuffer = null;
-    if (imageBase64) {
-      imageBuffer = Buffer.from(imageBase64, 'base64');
+    // Build payload
+    const basePayload: any = {
+      author_profile_id: profileId,
+      title: createPostDto.title,
+      description: createPostDto.description,
+      requirements: createPostDto.requirements,
+      location: createPostDto.location,
+      department: createPostDto.departments?.length
+        ? createPostDto.departments.join(', ')
+        : createPostDto.department,
+      deadline: createPostDto.deadline,
+      caption: createPostDto.caption,
+      status: createPostDto.status || 'open',
+    };
+
+    // Prefer new schema: include departments array only when provided
+    if (Array.isArray(createPostDto.departments)) {
+      basePayload.departments = createPostDto.departments;
     }
 
-    // First try inserting with departments array (new schema).
+    // First try inserting with the constructed payload
     let { data, error } = await supabase
       .from('posts')
-      .insert({
-        author_profile_id: profileId,
-        title: createPostDto.title,
-        description: createPostDto.description,
-        requirements: createPostDto.requirements,
-        location: createPostDto.location,
-        department: createPostDto.departments?.length ? createPostDto.departments.join(', ') : createPostDto.department,
-        departments: createPostDto.departments,
-        deadline: createPostDto.deadline,
-        image: imageBuffer, // Store binary image directly
-        caption: createPostDto.caption,
-        status: createPostDto.status || 'open',
-      })
+      .insert(basePayload)
       .select()
       .single();
 
-    // If the column doesn't exist yet, retry without `departments` to avoid breaking.
-    if (error && /column .*departments.* does not exist/i.test(error.message || '')) {
-      this.logger.warn('Departments column missing. Retrying insert without departments array for backward compatibility.');
+    // If the column doesn't exist or schema cache doesn't include it, retry without `departments`
+    const missingDepartmentsColumn =
+      error && /departments/i.test(error.message || '') && (
+        /column .*departments.* does not exist/i.test(error.message || '') ||
+        /could not find .*departments.* column/i.test(error.message || '') ||
+        /schema cache/i.test(error.message || '')
+      );
+
+    if (missingDepartmentsColumn) {
+      this.logger.warn('Departments column missing in posts. Retrying insert without departments array for backward compatibility.');
+      const { departments, ...fallbackPayload } = basePayload;
       const retry = await supabase
         .from('posts')
-        .insert({
-          author_profile_id: profileId,
-          title: createPostDto.title,
-          description: createPostDto.description,
-          requirements: createPostDto.requirements,
-          location: createPostDto.location,
-          department: createPostDto.departments?.length ? createPostDto.departments.join(', ') : createPostDto.department,
-          deadline: createPostDto.deadline,
-          image: imageBuffer,
-          caption: createPostDto.caption,
-          status: createPostDto.status || 'open',
-        })
+        .insert(fallbackPayload)
         .select()
         .single();
       data = retry.data;
@@ -171,6 +186,30 @@ export class PostsService {
     if (error) {
       this.logger.error('Failed to create post:', error);
       throw new BadRequestException(`Failed to create post: ${error.message}`);
+    }
+
+    if (imageBase64 && data?.id) {
+      try {
+        const isUrl = /^https?:\/\//i.test(imageBase64);
+        const isDataUri = /^data:image\//i.test(imageBase64);
+        let imageUrl = imageBase64;
+        if (!isUrl) {
+          imageUrl = await this.photoService.uploadPostImageFromBase64(imageBase64, data.id);
+        }
+        const { data: updated, error: updateError } = await supabase
+          .from('posts')
+          .update({ image_url: imageUrl })
+          .eq('id', data.id)
+          .select()
+          .single();
+        if (!updateError) {
+          data = updated;
+        } else {
+          this.logger.error('Failed to update post with image_url:', updateError);
+        }
+      } catch (e) {
+        this.logger.error('Failed to process post image:', e);
+      }
     }
 
     return data;
@@ -300,18 +339,19 @@ export class PostsService {
       throw new BadRequestException('This project is no longer accepting applications');
     }
 
-    // Check if already applied
+    // Check if already applied — make this idempotent
     this.logger.log(`🔍 Checking if already applied to project: ${projectId}`);
     const { data: existing } = await supabase
       .from('project_applications')
-      .select('id')
+      .select('*')
       .eq('project_id', projectId)
       .eq('artist_profile_id', artistProfileId)
       .maybeSingle();
 
     if (existing) {
-      this.logger.warn(`⚠️  Artist has already applied: artistProfileId=${artistProfileId}, projectId=${projectId}`);
-      throw new BadRequestException('You have already applied to this project');
+      this.logger.log(`ℹ️  Artist has already applied; returning existing application. artistProfileId=${artistProfileId}, projectId=${projectId}, applicationId=${existing.id}`);
+      // Idempotent behavior: return the existing application instead of erroring
+      return existing;
     }
 
     // Create application
@@ -354,7 +394,7 @@ export class PostsService {
           )
         ),
         project:posts!project_id(
-          id, title, description, department, location, image, deadline, status
+          id, title, description, department, location, image_url, deadline, status
         )
       `)
       .order('applied_at', { ascending: false })
@@ -535,4 +575,3 @@ export class PostsService {
     };
   }
 }
-

@@ -11,6 +11,7 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsString()
+  image?: string;
 
   @IsOptional()
   @IsDateString()

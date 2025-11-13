@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { SupabaseService } from '../supabase/supabase.service';
+import { PhotoService } from '../photo/photo.service';
 import { OtpService } from './services/otp.service';
 import { SignupDto } from './dto/auth.dto';
 
@@ -10,6 +11,7 @@ export class AuthService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
+    private readonly photoService: PhotoService,
     private readonly otpService: OtpService,
     private readonly jwtService: JwtService,
   ) { }
@@ -121,11 +123,22 @@ export class AuthService {
       // Format phone number
       const formattedPhone = this.otpService.formatPhoneNumber(signupDto.phone);
 
-      // Verify OTP first
+      // Verify OTP first; if invalid, allow signup if a prior verification exists within a grace window
       const verification = await this.otpService.verifyOTP(formattedPhone, signupDto.otp);
 
       if (!verification.isValid) {
-        throw new UnauthorizedException(verification.message);
+        const admin = this.supabaseService.getAdminClient();
+        const { data: recent } = await admin
+          .from('otp_verifications')
+          .select('verified_at')
+          .eq('phone', formattedPhone)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        const lastVerifiedAt = Array.isArray(recent) && recent.length > 0 ? recent[0]?.verified_at : null;
+        const withinGrace = lastVerifiedAt && (Date.now() - new Date(lastVerifiedAt).getTime()) < 10 * 60 * 1000;
+        if (!withinGrace) {
+          throw new UnauthorizedException(verification.message);
+        }
       }
 
       // Check if user already exists
@@ -155,6 +168,36 @@ export class AuthService {
         throw new BadRequestException('Failed to create user account');
       }
 
+      // Upload or accept profile picture URL if provided (NEW USERS ONLY)
+      let profilePicUrl: string | null = null;
+      if (signupDto.profilePhoto) {
+        const isUrl = /^https?:\/\//i.test(signupDto.profilePhoto);
+        const isDataUri = /^data:image\//i.test(signupDto.profilePhoto);
+        try {
+          if (isUrl) {
+            profilePicUrl = signupDto.profilePhoto;
+          } else {
+            this.logger.log('📸 Uploading profile picture to Storage...');
+            // Use appropriate method based on role
+            if (signupDto.role === 'artist') {
+              profilePicUrl = await this.photoService.uploadArtistProfilePicFromBase64(
+                signupDto.profilePhoto,
+                newUser.id,
+              );
+            } else if (signupDto.role === 'recruiter') {
+              profilePicUrl = await this.photoService.uploadRecruiterProfilePicFromBase64(
+                signupDto.profilePhoto,
+                newUser.id,
+              );
+            }
+            this.logger.log(`✅ Profile picture uploaded: ${profilePicUrl}`);
+          }
+        } catch (e) {
+          this.logger.warn('Failed to process profile picture, proceeding without image:', e);
+          profilePicUrl = null;
+        }
+      }
+
       // Create base profile
       const { data: baseProfile, error: profileError } = await supabase
         .from('profiles')
@@ -163,7 +206,8 @@ export class AuthService {
           role: signupDto.role,
           first_name: signupDto.firstName,
           last_name: signupDto.lastName,
-          profile_photo_url: signupDto.profilePhoto,
+          // Optional legacy field retained for base profile display
+          profile_photo_url: profilePicUrl,
         })
         .select()
         .single();
@@ -188,9 +232,10 @@ export class AuthService {
             department: signupDto.department,
             state: signupDto.state,
             city: signupDto.city,
-            aadhar_front_url: signupDto.aadharFront,
-            aadhar_back_url: signupDto.aadharBack,
+            aadhar_number: signupDto.aadharNumber,
             bio: signupDto.bio,
+            // Store Supabase Storage URL (new users only)
+            profile_pic: profilePicUrl,
           });
 
         if (artistProfileError) {
@@ -212,9 +257,10 @@ export class AuthService {
             department: signupDto.department,
             state: signupDto.state,
             city: signupDto.city,
-            aadhar_front_url: signupDto.aadharFront,
-            aadhar_back_url: signupDto.aadharBack,
+            aadhar_number: signupDto.aadharNumber,
             bio: signupDto.bio,
+            // Store Supabase Storage URL (new users only)
+            profile_pic: profilePicUrl,
           })
           .select()
           .single();
@@ -329,6 +375,26 @@ export class AuthService {
 
       const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
+      if (profile?.id && profile.role === 'artist') {
+        const { data: artistProfile } = await supabase
+          .from('artist_profiles')
+          .select('profile_pic')
+          .eq('profile_id', profile.id)
+          .maybeSingle();
+        if (artistProfile?.profile_pic) {
+          profile.profile_pic = artistProfile.profile_pic;
+        }
+      } else if (profile?.id && profile.role === 'recruiter') {
+        const { data: recruiterProfile } = await supabase
+          .from('recruiter_profiles')
+          .select('profile_pic')
+          .eq('profile_id', profile.id)
+          .maybeSingle();
+        if (recruiterProfile?.profile_pic) {
+          profile.profile_pic = recruiterProfile.profile_pic;
+        }
+      }
+
       // Query social links
       const { data: socialLinks } = await supabase
         .from('profile_social_links')
@@ -430,13 +496,33 @@ export class AuthService {
     if (error || !user) {
       throw new UnauthorizedException('User not found');
     }
+    let profile: any = Array.isArray(user.profiles) ? user.profiles[0] : user.profiles || null;
+    if (profile?.id && profile.role === 'artist') {
+      const { data: artistProfile } = await admin
+        .from('artist_profiles')
+        .select('profile_pic')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      if (artistProfile?.profile_pic) {
+        profile.profile_pic = artistProfile.profile_pic;
+      }
+    } else if (profile?.id && profile.role === 'recruiter') {
+      const { data: recruiterProfile } = await admin
+        .from('recruiter_profiles')
+        .select('profile_pic')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      if (recruiterProfile?.profile_pic) {
+        profile.profile_pic = recruiterProfile.profile_pic;
+      }
+    }
     return {
       user: {
         id: user.id,
         phone: user.phone,
         email: user.email,
       },
-      profile: Array.isArray(user.profiles) ? user.profiles[0] : user.profiles || null,
+      profile,
     };
   }
 

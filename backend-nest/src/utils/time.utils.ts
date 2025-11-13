@@ -8,7 +8,7 @@
  */
 export function getCurrentIST(): string {
   const now = new Date();
-  return now.toISOString();
+  return formatISTOffset(now);
 }
 
 /**
@@ -25,18 +25,16 @@ export function getCurrentISTForComparison(): string {
  */
 export function getOTPExpirationIST(): string {
   const now = new Date();
-  const expirationTime = 10 * 60 * 1000; // 10 minutes in milliseconds
+  const expirationTime = 10 * 60 * 1000; // 10 minutes
   const expiry = new Date(now.getTime() + expirationTime);
-  return expiry.toISOString();
+  return formatISTOffset(expiry);
 }
 
 /**
  * Format date to IST string for display
  */
 export function formatToIST(date: Date): string {
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istTime = new Date(date.getTime() + istOffset);
-  return istTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  return formatISTOffset(date);
 }
 
 /**
@@ -57,10 +55,23 @@ export const ISTTimestamp = {
     const now = new Date();
     const expirationTime = minutes * 60 * 1000;
     const expiry = new Date(now.getTime() + expirationTime);
-    return expiry.toISOString();
+    return formatISTOffset(expiry);
   },
-  fromDate: (date: Date): string => {
-    return date.toISOString();
-  },
+  fromDate: (date: Date): string => formatISTOffset(date),
 };
+
+function formatISTOffset(date: Date): string {
+  // Convert to IST by adding offset from UTC
+  const utcMs = date.getTime() + date.getTimezoneOffset() * 60000;
+  const istMs = utcMs + 5.5 * 60 * 60 * 1000; // +05:30
+  const ist = new Date(istMs);
+  const yyyy = ist.getFullYear();
+  const mm = String(ist.getMonth() + 1).padStart(2, '0');
+  const dd = String(ist.getDate()).padStart(2, '0');
+  const HH = String(ist.getHours()).padStart(2, '0');
+  const MM = String(ist.getMinutes()).padStart(2, '0');
+  const SS = String(ist.getSeconds()).padStart(2, '0');
+  // Return timestamptz-compatible string with explicit IST offset
+  return `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}+05:30`;
+}
 

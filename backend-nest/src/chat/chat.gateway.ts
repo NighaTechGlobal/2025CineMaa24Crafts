@@ -41,6 +41,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         headers: { Authorization: `Bearer ${token}` },
       });
       const supUser = resp.data;
+      // Stash user token for user-scoped RLS operations
+      (client.data as any).userToken = token;
       // Map to local user profile via Supabase tables
       const admin = this.chatService['supabaseService'].getAdminClient();
       const { data: user, error: userError } = await admin
@@ -78,8 +80,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!user || !conversationId) return client.emit('error', { code: 'bad_request', message: 'Missing fields' });
 
     // Verify membership
-    const admin = this.chatService['supabaseService'].getAdminClient();
-    const { data: membership } = await admin
+    const userClient = this.chatService['supabaseService'].getUserClient((client.data as any)?.userToken);
+    const { data: membership } = await userClient
       .from('conversation_members')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -106,7 +108,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return client.emit('error', { code: 'bad_request', message: 'Missing fields' });
     }
     // Persist message (idempotent via unique constraint on client_msg_id)
-    const msg = await this.chatService.sendMessage(conversationId, user.profileId, { content, metadata, client_msg_id: clientMsgId } as any);
+    const msg = await this.chatService.sendMessage(
+      conversationId,
+      user.profileId,
+      { content, metadata, client_msg_id: clientMsgId } as any,
+      (client.data as any)?.userToken,
+    );
     // Broadcast message to conversation room
     this.server.to(`room:${conversationId}`).emit('message', {
       messageId: msg.id,
@@ -127,15 +134,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return client.emit('error', { code: 'bad_request', message: 'Missing fields' });
     }
     // Update receipts up to lastMessageId
-    const admin = this.chatService['supabaseService'].getAdminClient();
-    const { error: rpcError } = await admin.rpc('mark_messages_read_up_to', {
+    const userClient = this.chatService['supabaseService'].getUserClient((client.data as any)?.userToken);
+    const { error: rpcError } = await userClient.rpc('mark_messages_read_up_to', {
       p_conversation_id: conversationId,
       p_profile_id: user.profileId,
       p_last_message_id: lastMessageId,
     });
     if (rpcError) {
       // Fallback: update messages with id <= lastMessageId
-      const { data: toUpdate } = await admin
+      const { data: toUpdate } = await userClient
         .from('messages')
         .select('id, read_by')
         .eq('conversation_id', conversationId)
@@ -143,7 +150,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       for (const m of toUpdate || []) {
         const readBy = Array.isArray(m.read_by) ? m.read_by : [];
         if (!readBy.includes(user.profileId)) {
-          await admin
+          await userClient
             .from('messages')
             .update({ read_by: [...readBy, user.profileId] })
             .eq('id', m.id);
@@ -162,7 +169,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!user || !conversationId || typeof isTyping !== 'boolean') {
       return client.emit('error', { code: 'bad_request', message: 'Missing fields' });
     }
-    await this.chatService.updateTyping(conversationId, user.profileId, !!isTyping);
+    await this.chatService.updateTyping(conversationId, user.profileId, !!isTyping, (client.data as any)?.userToken);
     this.server.to(`room:${conversationId}`).emit('user_typing', { conversationId, userId: user.profileId, isTyping: !!isTyping });
   }
 }

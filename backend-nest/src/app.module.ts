@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { AppController } from './app.controller';
 
 import { SupabaseModule } from './supabase/supabase.module';
+import { PhotoModule } from './photo/photo.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProfilesModule } from './profiles/profiles.module';
@@ -13,6 +15,7 @@ import { PostsModule } from './posts/posts.module';
 import { ChatModule } from './chat/chat.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -37,6 +40,7 @@ import { AdminModule } from './admin/admin.module';
       },
     ]),
     SupabaseModule,
+    PhotoModule,
     AuthModule,
     UsersModule,
     ProfilesModule,
@@ -46,7 +50,9 @@ import { AdminModule } from './admin/admin.module';
     ChatModule,
     UploadsModule,
     AdminModule,
+    NotificationsModule,
   ],
+  controllers: [AppController],
   providers: [
     // Enable throttler guard for rate limiting
     {

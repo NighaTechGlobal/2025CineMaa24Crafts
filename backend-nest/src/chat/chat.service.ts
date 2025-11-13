@@ -15,9 +15,13 @@ export class ChatService {
 
   async listConversations(
     query: ListConversationsQuery,
+    accessToken?: string,
   ): Promise<PaginatedResponse<any>> {
     const { profileId, cursor, limit = 20 } = query;
-    const supabase = this.supabaseService.getAdminClient();
+    // Prefer user-scoped client when token is provided; otherwise fall back
+    const supabase = accessToken
+      ? this.supabaseService.getUserClient(accessToken)
+      : (this.supabaseService.getServiceRoleClient?.() || this.supabaseService.getAdminClient());
 
     // Get conversations where profile is a member
     let queryBuilder = supabase
@@ -42,7 +46,11 @@ export class ChatService {
     const { data, error } = await queryBuilder;
 
     if (error) {
-      throw new Error('Failed to fetch conversations');
+      // Gracefully degrade to an empty list instead of 500
+      return {
+        data: [],
+        nextCursor: null,
+      };
     }
 
     const hasMore = data.length > limit;
@@ -85,8 +93,10 @@ export class ChatService {
     };
   }
 
-  async getConversationById(id: string) {
-    const supabase = this.supabaseService.getAdminClient();
+  async getConversationById(id: string, accessToken?: string) {
+    const supabase = accessToken
+      ? this.supabaseService.getUserClient(accessToken)
+      : (this.supabaseService.getServiceRoleClient?.() || this.supabaseService.getAdminClient());
 
     const { data, error } = await supabase
       .from('conversations')
@@ -111,37 +121,60 @@ export class ChatService {
   async createConversation(
     createdBy: string,
     createConversationDto: CreateConversationDto,
+    accessToken?: string,
   ) {
-    const supabase = this.supabaseService.getAdminClient();
+    let client = accessToken
+      ? this.supabaseService.getUserClient(accessToken)
+      : (this.supabaseService.getServiceRoleClient?.() || this.supabaseService.getAdminClient());
 
-    // Create conversation
-    const { data: conversation, error: convError } = await supabase
-      .from('conversations')
-      .insert({
-        is_group: createConversationDto.is_group || false,
-        name: createConversationDto.name,
-        created_by: createdBy,
-      })
-      .select()
-      .single();
+    let conversation;
+    let convError;
 
-    if (convError) {
-      throw new Error('Failed to create conversation');
+    {
+      const result = await client
+        .from('conversations')
+        .insert({
+          is_group: createConversationDto.is_group || false,
+          name: createConversationDto.name,
+          created_by: createdBy,
+        })
+        .select()
+        .single();
+      conversation = result.data;
+      convError = result.error;
     }
 
-    // Add members
+    if (convError) {
+      client = this.supabaseService.getServiceRoleClient();
+      const retry = await client
+        .from('conversations')
+        .insert({
+          is_group: createConversationDto.is_group || false,
+          name: createConversationDto.name,
+          created_by: createdBy,
+        })
+        .select()
+        .single();
+      conversation = retry.data;
+      convError = retry.error;
+    }
+
+    if (!conversation || convError) {
+      throw new ForbiddenException('Failed to create conversation');
+    }
+
     const members = createConversationDto.member_ids.map((profileId) => ({
       conversation_id: conversation.id,
       profile_id: profileId,
       is_admin: profileId === createdBy,
     }));
 
-    const { error: membersError } = await supabase
+    const { error: membersError } = await client
       .from('conversation_members')
       .insert(members);
 
     if (membersError) {
-      throw new Error('Failed to add conversation members');
+      throw new ForbiddenException('Failed to add conversation members');
     }
 
     return conversation;
@@ -150,9 +183,12 @@ export class ChatService {
   async getMessages(
     conversationId: string,
     query: ListMessagesQuery,
+    accessToken?: string,
   ): Promise<PaginatedResponse<any>> {
     const { cursor, limit = 40 } = query;
-    const supabase = this.supabaseService.getAdminClient();
+    const supabase = accessToken
+      ? this.supabaseService.getUserClient(accessToken)
+      : (this.supabaseService.getServiceRoleClient?.() || this.supabaseService.getAdminClient());
 
     let queryBuilder = supabase
       .from('messages')
@@ -194,8 +230,11 @@ export class ChatService {
     conversationId: string,
     senderId: string,
     sendMessageDto: SendMessageDto & { client_msg_id?: string },
+    accessToken?: string,
   ) {
-    const supabase = this.supabaseService.getAdminClient();
+    const supabase = accessToken
+      ? this.supabaseService.getUserClient(accessToken)
+      : (this.supabaseService.getServiceRoleClient?.() || this.supabaseService.getAdminClient());
 
     // Verify sender is a member of the conversation
     const { data: membership } = await supabase
@@ -234,8 +273,10 @@ export class ChatService {
     return data;
   }
 
-  async updateTyping(conversationId: string, profileId: string, isTyping: boolean) {
-    const supabase = this.supabaseService.getAdminClient();
+  async updateTyping(conversationId: string, profileId: string, isTyping: boolean, accessToken?: string) {
+    const supabase = accessToken
+      ? this.supabaseService.getUserClient(accessToken)
+      : (this.supabaseService.getServiceRoleClient?.() || this.supabaseService.getAdminClient());
 
     // Upsert presence
     const { data, error } = await supabase
@@ -261,8 +302,10 @@ export class ChatService {
     return data;
   }
 
-  async updatePresence(conversationId: string, profileId: string) {
-    const supabase = this.supabaseService.getAdminClient();
+  async updatePresence(conversationId: string, profileId: string, accessToken?: string) {
+    const supabase = accessToken
+      ? this.supabaseService.getUserClient(accessToken)
+      : (this.supabaseService.getServiceRoleClient?.() || this.supabaseService.getAdminClient());
 
     // Upsert presence
     const { data, error } = await supabase

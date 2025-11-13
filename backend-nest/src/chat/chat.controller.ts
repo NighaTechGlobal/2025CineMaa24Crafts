@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   UseGuards,
+  Headers,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
@@ -28,25 +29,39 @@ export class ChatController {
     @Query('profileId') profileId: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
+    @Headers('authorization') authHeader?: string,
   ) {
-    return this.chatService.listConversations({
-      profileId,
-      cursor,
-      limit: limit ? parseInt(limit, 10) : 20,
-    });
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.substring('Bearer '.length)
+      : undefined;
+    return this.chatService.listConversations(
+      {
+        profileId,
+        cursor,
+        limit: limit ? parseInt(limit, 10) : 20,
+      },
+      token,
+    );
   }
 
   @Get('conversations/:id')
-  async getConversation(@Param('id') id: string) {
-    return this.chatService.getConversationById(id);
+  async getConversation(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.substring('Bearer '.length)
+      : undefined;
+    return this.chatService.getConversationById(id, token);
   }
 
   @Post('conversations')
   async createConversation(
     @Body() createConversationDto: CreateConversationDto,
     @CurrentProfile() profile: any,
+    @Headers('authorization') authHeader?: string,
   ) {
-    return this.chatService.createConversation(profile.id, createConversationDto);
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.substring('Bearer '.length)
+      : undefined;
+    return this.chatService.createConversation(profile?.profileId, createConversationDto, token);
   }
 
   // Messages
@@ -55,11 +70,19 @@ export class ChatController {
     @Param('id') conversationId: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
+    @Headers('authorization') authHeader?: string,
   ) {
-    return this.chatService.getMessages(conversationId, {
-      cursor,
-      limit: limit ? parseInt(limit, 10) : 40,
-    });
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.substring('Bearer '.length)
+      : undefined;
+    return this.chatService.getMessages(
+      conversationId,
+      {
+        cursor,
+        limit: limit ? parseInt(limit, 10) : 40,
+      },
+      token,
+    );
   }
 
   @Post('conversations/:id/messages')
@@ -69,7 +92,7 @@ export class ChatController {
     @Body() sendMessageDto: SendMessageDto,
     @CurrentProfile() profile: any,
   ) {
-    return this.chatService.sendMessage(conversationId, profile.id, sendMessageDto);
+    return this.chatService.sendMessage(conversationId, profile?.profileId, sendMessageDto);
   }
 
   // Typing indicator
@@ -78,11 +101,16 @@ export class ChatController {
     @Param('id') conversationId: string,
     @Body() updateTypingDto: UpdateTypingDto,
     @CurrentProfile() profile: any,
+    @Headers('authorization') authHeader?: string,
   ) {
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.substring('Bearer '.length)
+      : undefined;
     return this.chatService.updateTyping(
       conversationId,
-      profile.id,
+      profile?.profileId,
       updateTypingDto.is_typing,
+      token,
     );
   }
 
@@ -91,8 +119,11 @@ export class ChatController {
   async updatePresence(
     @Param('id') conversationId: string,
     @CurrentProfile() profile: any,
+    @Headers('authorization') authHeader?: string,
   ) {
-    return this.chatService.updatePresence(conversationId, profile.id);
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.substring('Bearer '.length)
+      : undefined;
+    return this.chatService.updatePresence(conversationId, profile?.profileId, token);
   }
 }
-

@@ -44,7 +44,7 @@ export class ProjectsController {
     @Body() createProjectDto: CreateProjectDto,
     @CurrentProfile() profile: any,
   ) {
-    return this.projectsService.createProject(profile.id, createProjectDto);
+    return this.projectsService.createProject(profile?.profileId, createProjectDto);
   }
 
   @Post(':id/members')

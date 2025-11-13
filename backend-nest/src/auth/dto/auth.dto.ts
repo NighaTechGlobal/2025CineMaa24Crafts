@@ -116,14 +116,12 @@ export class SignupDto {
   @IsOptional()
   customLinks?: string[];
 
-  // Aadhar verification
+  // Aadhar number
   @IsString()
-  @IsOptional()
-  aadharFront?: string;
-
-  @IsString()
-  @IsOptional()
-  aadharBack?: string;
+  @IsNotEmpty()
+  @Length(16, 16, { message: 'Aadhar number must be 16 digits' })
+  @Matches(/^\d{16}$/)
+  aadharNumber: string;
 
   // Bio/description
   @IsString()

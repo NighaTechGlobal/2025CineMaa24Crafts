@@ -51,7 +51,7 @@ export class SchedulesController {
     @Body() createScheduleDto: CreateScheduleDto,
     @CurrentProfile() profile: any,
   ) {
-    return this.schedulesService.createSchedule(profile.id, createScheduleDto);
+    return this.schedulesService.createSchedule(profile?.profileId, createScheduleDto);
   }
 
   @Post(':id/members')
@@ -71,7 +71,7 @@ export class SchedulesController {
     @CurrentProfile() currentProfile: any,
   ) {
     // Ensure user can only update their own status
-    if (currentProfile.id !== profileId) {
+    if (currentProfile?.profileId !== profileId) {
       throw new Error('Unauthorized');
     }
     return this.schedulesService.updateMemberStatus(
@@ -93,8 +93,8 @@ export class SchedulesController {
     if (!profile) {
       throw new ForbiddenException('Profile not found');
     }
-    // The CurrentProfile decorator returns request.user which has profileId from JWT strategy
-    const profileId = profile.profileId || profile.id;
+    // The CurrentProfile decorator returns request.user which has profileId
+    const profileId = profile?.profileId;
     if (!profileId) {
       throw new ForbiddenException('Profile ID not found');
     }

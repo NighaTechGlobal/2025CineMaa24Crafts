@@ -107,6 +107,7 @@ export interface ListPostsQuery {
   limit?: number;
   profileId?: string;
   role?: string; // To filter posts by author role
+  department?: string; // To filter posts by department (string or array)
 }
 
 export interface ListCommentsQuery {

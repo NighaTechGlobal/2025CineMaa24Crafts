@@ -42,10 +42,11 @@ export class UploadsController {
 
     const result = await this.uploadsService.uploadFile(file, profile.id);
     
-    // Return base64 image that can be stored directly in database
+    // Return public URL from Storage
     return {
       success: result.success,
-      image: result.image, // base64 encoded image
+      publicUrl: result.publicUrl,
+      url: result.url,
     };
   }
 }

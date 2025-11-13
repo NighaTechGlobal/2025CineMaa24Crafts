@@ -5,11 +5,28 @@ import * as morgan from 'morgan';
 import helmet from 'helmet';
 import { validateEnvironmentVariables } from './utils/config-validation';
 import { RedisIoAdapter } from './ws/redis-io.adapter';
+import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   // Validate environment variables before starting the application
   validateEnvironmentVariables();
   const app = await NestFactory.create(AppModule);
+
+  // Disable ETag to prevent 304 Not Modified on dynamic API responses
+  try {
+    const expressApp = (app as any).getHttpAdapter?.().getInstance?.();
+    expressApp?.disable?.('etag');
+  } catch {
+    // ignore if adapter methods differ
+  }
+
+  // Force no-store caching for API endpoints to avoid stale 304 behavior on clients
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
 
   // Security headers with Helmet.js
   app.use(helmet({

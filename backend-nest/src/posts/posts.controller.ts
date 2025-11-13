@@ -31,13 +31,15 @@ export class PostsController {
     @Query('limit') limit?: string,
     @Query('profileId') profileId?: string,
     @Query('role') role?: string,
+    @Query('department') department?: string,
   ) {
-    this.logger.log(`🌐 GET /posts - cursor: ${cursor || 'none'}, limit: ${limit || '20'}, profileId: ${profileId || 'none'}, role: ${role || 'none'}`);
+    this.logger.log(`🌐 GET /posts - cursor: ${cursor || 'none'}, limit: ${limit || '20'}, profileId: ${profileId || 'none'}, role: ${role || 'none'}, department: ${department || 'none'}`);
     return this.postsService.listPosts({
       cursor,
       limit: limit ? parseInt(limit, 10) : 20,
       profileId,
       role,
+      department,
     });
   }
 

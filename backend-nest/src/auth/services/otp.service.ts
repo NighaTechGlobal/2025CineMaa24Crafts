@@ -72,10 +72,10 @@ export class OtpService {
       const supabase = this.supabaseService.getAdminClient();
       const expiresAt = getOTPExpirationIST();
 
-      // Invalidate any existing unverified OTPs for this phone
+      // Invalidate any existing unverified OTPs for this phone by expiring them immediately
       await supabase
         .from('otp_verifications')
-        .update({ verified_at: getCurrentIST() })
+        .update({ expires_at: getCurrentIST() })
         .eq('phone', phoneNumber)
         .is('verified_at', null);
 
