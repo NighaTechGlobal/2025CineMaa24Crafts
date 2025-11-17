@@ -1,5 +1,6 @@
-import 'react-native-reanimated';
+import './src/polyfills/platformConstants';
 import 'react-native-gesture-handler';
+import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
